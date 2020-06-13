@@ -39,11 +39,13 @@ public class Board : MonoBehaviour {
 
         foreach (var p in board)
         {
-            var dist = Vector3.Distance(input, p.transform.position);
-            if (dist < minDist)
-            {
-                minDist = dist;
-                nearestPiece = p;
+            if (p != null) {
+                var dist = Vector3.Distance(input, p.transform.position);
+                if (dist < minDist)
+                {
+                    minDist = dist;
+                    nearestPiece = p;
+                }
             }
         }
 

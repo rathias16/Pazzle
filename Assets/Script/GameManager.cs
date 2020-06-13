@@ -10,44 +10,69 @@ public class GameManager : MonoBehaviour {
     [SerializeField]
     private Board  board;
 
+    public enum GameState
+    {
+        Idle,
+        PieceMove,
+        MatchCheck,
+        DeletePiece,
+        FillPiece,
+    }
+
+    private GameState state;
 
     // Use this for initialization
     void Start () {
         board.InitializeBoard(6, 5);
         Debug.Log("Start!!");
-        StartCoroutine(Idling());
+        state = GameState.Idle;
 	}
 	
 	// Update is called once per frame
 	void Update () {
-        
-         
+
+        switch (state)
+        {
+            case GameState.Idle:
+                Idling();
+                break;
+			case GameState.PieceMove:
+				PieceMove();
+				break;
+            case GameState.MatchCheck:
+                MatchCheck();
+                break;
+			case GameState.DeletePiece:
+				DeletePiece();
+				break;
+			case GameState.FillPiece:
+				FillPiece();
+				break;
+        }
 
 	}
 
-    public IEnumerator Idling()
+    public void Idling()
     {
-        while (true)
-        {
+        
             if (Input.GetMouseButtonDown(0))
             {
                 selectedPiecce = board.GetNearestPiece(Input.mousePosition);
 
-                StartCoroutine(PieceMove());
-                break;
+            state = GameState.PieceMove;
+                
 
             }
-            Debug.Log("待機");
-            yield return null;
-        }
+            
+            
+        
 
     }
 
-    public IEnumerator PieceMove()
+    public void PieceMove()
     {
-        while (true)
-        {
-            Debug.Log("PieceMove");
+        
+            
             if (Input.GetMouseButton(0))
             {
                 var piece = board.GetNearestPiece(Input.mousePosition);
@@ -58,42 +83,40 @@ public class GameManager : MonoBehaviour {
             }
             else if (Input.GetMouseButtonUp(0))
             {
-                StartCoroutine(MatchCheck());
+            state = GameState.MatchCheck;
                 
             }
-            yield return null;
-        }
+            
+        
     }
 
-    public IEnumerator MatchCheck()
+    public void MatchCheck()
     {
-        while (true)
-        {
+        
             if (board.HasMatch())
             {
-                StartCoroutine(DeletePiece());
+            state = GameState.DeletePiece;
                 
             }
             else
             {
-                StartCoroutine(Idling());
+            state = GameState.Idle;
                 
             }
-            yield return null;
-        }
+            
+        
     }
-    public IEnumerator DeletePiece()
+    public void DeletePiece()
     {
        
         board.DeleteMarchPiece();
-        StartCoroutine(FillPiece());
-        yield break;
+		state = GameState.FillPiece;
         
     }
-    public IEnumerator FillPiece()
+    public void FillPiece()
     {
         board.FillPiece();
-        StartCoroutine(MatchCheck());
-        yield break;
+        state = GameState.Idle;
+        
     }
 }
