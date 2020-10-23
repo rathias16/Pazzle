@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 public class Board : MonoBehaviour {
@@ -8,12 +9,12 @@ public class Board : MonoBehaviour {
     private GameObject piecePrefab;
 
     private PieceManager[,] board;
-
+	private static Vector2[] directions = new Vector2[]{Vector2.up,Vector2.down,Vector2.left,Vector2.right};
     private int width;
     private int height;
     private int pieceWidth;
     private int randomSeed;
-
+	//ゲームセット
     public void InitializeBoard(int boardWidth, int boardHeight)
     {
         width = boardWidth;
@@ -31,7 +32,7 @@ public class Board : MonoBehaviour {
             }
         }
     }
-
+	//一番近いピースを取得
     public PieceManager GetNearestPiece(Vector3 input)
     {
         var minDist = float.MaxValue;
@@ -52,7 +53,7 @@ public class Board : MonoBehaviour {
         return nearestPiece;
 
     }
-
+	//ピースを入れ替える
     public void SwitchPiece(PieceManager p1,PieceManager p2)
     {
         var p1Position = p1.transform.position;
@@ -65,7 +66,7 @@ public class Board : MonoBehaviour {
         board[(int)p2BoardPos.x, (int)p2BoardPos.y] = p1;
 
     }
-
+	//マッチを確認
     public bool HasMatch()
     {
         foreach (var piece in board)
@@ -77,23 +78,23 @@ public class Board : MonoBehaviour {
         }
         return false;
     }
-
-    public void DeleteMarchPiece()
+	//マッチしたピースを削除
+    public IEnumerator DeleteMarchPiece(Action endCallBack)
     {
-        foreach(var piece in board)
-        {
-            piece.Delete = IsMatchPiece(piece);
-        }
+        
         foreach (var piece in board)
         {
-            if(piece != null && piece.Delete)
+            if(piece != null && IsMatchPiece(piece))
             {
-                Destroy(piece.gameObject);
-            }
+				var pos = GetPieceBoardPos(piece);
+				DestroyMatchPiece(pos, piece.GetColor());
+				yield return new WaitForSeconds(0.3f);
+			}
         }
+		endCallBack();
     }
-
-    public void FillPiece()
+	//欠けたピースを補充
+    public IEnumerator FillPiece(Action endCallBack)
     {
         for (int i = 0; i < width; i++)
         {
@@ -102,30 +103,39 @@ public class Board : MonoBehaviour {
                 FillPiece(new Vector2(i, j));
             }
         }
-
+		yield return new WaitForSeconds(0.5f);
+		endCallBack();
     }
+	//マッチしている場合ほかのマッチしたピースとともに削除
 
-    // Use this for initialization
-    void Start () {
-		
+	private void DestroyMatchPiece(Vector2 pos,PieceManager.PieceColor color) {
+		if (!IsInBoard(pos))
+			return;
+		var piece = board[(int)pos.x, (int)pos.y];
+		if (piece == null || piece.Delete || piece.GetColor() != color)
+			return;
+		if (!IsMatchPiece(piece))
+			return;
+		piece.Delete = true;
+		foreach (var dir in directions)
+		{
+			DestroyMatchPiece(pos + dir, color);
+		}
+		Destroy(piece.gameObject);
 	}
 	
-	// Update is called once per frame
-	void Update () {
-		
-	}
-
+	//ピースのワールド座標を取得
     private Vector3 GetPieceWorldPos(Vector2 boardPos)
     {
         return new Vector3(boardPos.x * pieceWidth + (pieceWidth / 2), boardPos.y * pieceWidth + (pieceWidth / 2), 0);
     }
 
-
+	//ピースを生成
     private void CreatePiece(Vector2 position)
     {
         var createPos = GetPieceWorldPos(position);
 
-        int kind = Random.Range(0,6);
+        int kind = UnityEngine.Random.Range(0,6);
         var piece = Instantiate(piecePrefab, createPos, Quaternion.identity).GetComponent<PieceManager>();
         piece.transform.SetParent(transform);
         piece.SetSize(pieceWidth);
@@ -134,8 +144,8 @@ public class Board : MonoBehaviour {
         board[(int)position.x, (int)position.y] = piece;
 
     }
-
-    private Vector2 GetPieceBoardPos(PieceManager piece)
+	//ピースのボード上の座標を取得
+	private Vector2 GetPieceBoardPos(PieceManager piece)
     {
         for (int i = 0; i < width; i++)
         {
@@ -150,7 +160,7 @@ public class Board : MonoBehaviour {
 
         return Vector2.zero;
     }
-
+	//ピースがマッチしているかを判定
     private bool IsMatchPiece(PieceManager piece)
     {
         var pos = GetPieceBoardPos(piece);
@@ -162,7 +172,7 @@ public class Board : MonoBehaviour {
         return verticalMatchCount >= GameManager.MachingCount || horizontalMatchCount >= GameManager.MachingCount;
 
     }
-
+	//特定の色のピースの数をカウント
     private int GetSameKindPieceNum(PieceManager.PieceColor kind, Vector2 pos,Vector2 SearchDir)
     {
         int count = 0;
@@ -181,11 +191,12 @@ public class Board : MonoBehaviour {
         }
         return count;
     }
+	//ボードのマスキング
     private bool IsInBoard(Vector2 pos)
     {
         return pos.x >= 0 && pos.y >= 0 && pos.x < width && pos.y < height;
     }
-
+	//ピースの補充
     private void FillPiece(Vector2 pos)
     {
         var piece = board[(int)pos.x,(int)pos.y];

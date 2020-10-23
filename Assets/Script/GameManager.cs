@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 
 public class GameManager : MonoBehaviour {
@@ -17,6 +15,7 @@ public class GameManager : MonoBehaviour {
         MatchCheck,
         DeletePiece,
         FillPiece,
+		Wait,
     }
 
     private GameState state;
@@ -44,6 +43,8 @@ public class GameManager : MonoBehaviour {
                 break;
 			case GameState.DeletePiece:
 				DeletePiece();
+				break;
+			case GameState.Wait:
 				break;
 			case GameState.FillPiece:
 				FillPiece();
@@ -108,15 +109,14 @@ public class GameManager : MonoBehaviour {
     }
     public void DeletePiece()
     {
-       
-        board.DeleteMarchPiece();
-		state = GameState.FillPiece;
+		state = GameState.Wait;
+		StartCoroutine(board.DeleteMarchPiece(() => state=GameState.FillPiece));
         
     }
     public void FillPiece()
     {
-        board.FillPiece();
-        state = GameState.Idle;
+		state = GameState.Wait;
+		StartCoroutine(board.DeleteMarchPiece(() => state=GameState.MatchCheck));
         
     }
 }
